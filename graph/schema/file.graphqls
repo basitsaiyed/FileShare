@@ -1,0 +1,34 @@
+scalar Upload
+scalar Time
+
+type File {
+  id: ID!
+  originalName: String!
+  storagePath: String!
+  fileSize: Int!
+  downloadSlug: String!
+  createdAt: String!
+  expiresAt: String!
+  publicURL: String!
+  user: User!
+  downloadCount: Int!
+  lastDownloadedAt: Time
+}
+
+extend type Query {
+  myFiles: [File!]!
+  file(slug: String!): File
+  publicFile(slug: String!): File
+}
+
+extend type Mutation {
+  uploadFile(file: Upload!, fileName: String!, fileSize: Int!): File!
+  deleteFile(fileId: ID!): Boolean!
+  renameFile(fileId: ID!, newName: String!): File!
+  updateFileSettings(
+    fileId: ID!,
+    expiresAt: Time,
+    password: String
+  ): File!
+}
+
