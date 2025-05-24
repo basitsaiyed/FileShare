@@ -14,17 +14,21 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
+	storage_go "github.com/supabase-community/storage-go"
+
 	"github.com/basit/fileshare-backend/graph/model"
 	"github.com/basit/fileshare-backend/initializers"
 	"github.com/basit/fileshare-backend/models"
-	"github.com/google/uuid"
-	storage_go "github.com/supabase-community/storage-go"
 )
 
 // UploadFile is the resolver for the uploadFile field.
 // UploadFile is the resolver for the uploadFile field.
 func (r *mutationResolver) UploadFile(ctx context.Context, file graphql.Upload, fileName string, fileSize int32) (*model.File, error) {
-	userID, _ := GetUserIDFromContext(ctx)
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unauthorized")
+	}
 
 	supaURL := os.Getenv("SUPABASE_URL")
 	supaKey := os.Getenv("SUPABASE_KEY")

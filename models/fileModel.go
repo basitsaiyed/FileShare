@@ -8,16 +8,19 @@ import (
 
 type File struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	UserID       *uuid.UUID
 	OriginalName string
 	StoragePath  string
 	FileSize     int32
-	ContentType  string
-	DownloadSlug string `gorm:"uniqueIndex"`
-	IsPublic     bool   `gorm:"default:true"`
+	DownloadSlug string    `gorm:"uniqueIndex"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
 	ExpiresAt    *time.Time
-	CreatedAt    time.Time
-	PublicURL	string `gorm:"default:null"`
+	PublicURL    string `gorm:"default:null;text;"`
+	ContentType  string
+	IsPublic     bool `gorm:"default:true"`
 
-	User User `gorm:"foreignKey:UserID"`
+	UserID *uuid.UUID
+	User   User `gorm:"foreignKey:UserID"`
+
+	DownloadCount    int
+	LastDownloadedAt *time.Time
 }
