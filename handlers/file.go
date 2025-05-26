@@ -124,19 +124,32 @@ func DownloadFile(c *gin.Context) {
 	if !file.IsPublic {
 		userID, exists := c.Get("userID")
 		if !exists || file.UserID == nil || *file.UserID != userID.(uuid.UUID) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to download this file"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 			return
 		}
 	}
 
-	if file.ExpiresAt != nil && file.ExpiresAt.Before(time.Now()) {
-		c.JSON(http.StatusGone, gin.H{"error": "File has expired"})
-		return
-	}
-
-	// Increment download count and update last downloaded time
+	// ✅ Atomic counter update
 	initializers.DB.Model(&file).UpdateColumn("download_count", gorm.Expr("download_count + ?", 1))
 	initializers.DB.Model(&file).Update("last_downloaded_at", time.Now())
 
+	// ✅ Log the download event
+	var userID *uuid.UUID
+	if uid, ok := c.Get("userID"); ok {
+		uidVal := uid.(uuid.UUID)
+		userID = &uidVal
+	}
+
+	downloadEvent := models.DownloadEvent{
+		ID:        uuid.New(),
+		FileID:    file.ID,
+		UserID:    userID,
+		IPAddress: c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		CreatedAt: time.Now(),
+	}
+	initializers.DB.Create(&downloadEvent)
+
+	// ✅ Serve the file
 	c.File(file.StoragePath)
 }

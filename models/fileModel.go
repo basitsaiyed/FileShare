@@ -17,6 +17,7 @@ type File struct {
 	PublicURL    string `gorm:"default:null;text;"`
 	ContentType  string
 	IsPublic     bool `gorm:"default:true"`
+	
 
 	UserID *uuid.UUID
 	User   User `gorm:"foreignKey:UserID"`

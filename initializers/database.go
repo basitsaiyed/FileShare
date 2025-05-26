@@ -4,10 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/basit/fileshare-backend/models"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/basit/fileshare-backend/models"
+
 )
 
 var DB *gorm.DB
@@ -50,6 +52,7 @@ func ConnectToDatabase() {
 	if err := DB.AutoMigrate(
 		&models.User{},
 		&models.File{},
+		&models.DownloadEvent{},
 	); err != nil {
 		log.Fatalf("❌ Failed to migrate database schema: %v", err)
 	}
