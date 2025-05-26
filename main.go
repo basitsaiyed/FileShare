@@ -47,8 +47,12 @@ func main() {
 	jobs.StartCleanupJob()
 
 	router := gin.Default()
-	router.Use(middleware.GinContextToContextMiddleware())
-	
+	// Global middleware
+	router.Use(
+		middleware.GinContextToContextMiddleware(),
+		middleware.RateLimitMiddleware(),
+	)
+
 	routes.RegisterFileRoutes(router)
 
 	router.GET("/", func(c *gin.Context) {
