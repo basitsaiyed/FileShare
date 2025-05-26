@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 )
 
 type File struct {
@@ -17,7 +18,7 @@ type File struct {
 	PublicURL    string `gorm:"default:null;text;"`
 	ContentType  string
 	IsPublic     bool `gorm:"default:true"`
-	
+	PasswordHash *string `gorm:"default:null"`
 
 	UserID *uuid.UUID
 	User   User `gorm:"foreignKey:UserID"`

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lithammer/shortuuid/v4"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"github.com/basit/fileshare-backend/initializers"
@@ -21,6 +22,16 @@ func UploadFile(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 		return
+	}
+
+	password := c.PostForm("password")
+	if password != "" {
+		hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+		_ = string(hashBytes) // hash is generated but not used
 	}
 
 	uploadPath := "uploads/" + uuid.New().String() + "_" + file.Filename
@@ -115,6 +126,10 @@ func generateSlug() string {
 func DownloadFile(c *gin.Context) {
 	slug := c.Param("slug")
 	var file models.File
+	if file.ExpiresAt != nil && time.Now().After(*file.ExpiresAt) {
+		c.JSON(http.StatusGone, gin.H{"error": "This file has expired"})
+		return
+	}
 
 	if err := initializers.DB.Where("download_slug = ?", slug).First(&file).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
@@ -125,6 +140,19 @@ func DownloadFile(c *gin.Context) {
 		userID, exists := c.Get("userID")
 		if !exists || file.UserID == nil || *file.UserID != userID.(uuid.UUID) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
+			return
+		}
+	}
+	if file.PasswordHash != nil {
+		var body struct {
+			Password string `json:"password"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil || body.Password == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Password required"})
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(*file.PasswordHash), []byte(body.Password)); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Incorrect password"})
 			return
 		}
 	}
