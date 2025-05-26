@@ -6,9 +6,16 @@ type User {
   expiryReminders: Boolean!
 }
 
+type UserStats {
+  totalFiles: Int!
+  totalDownloads: Int!
+  storageUsed: String!
+}
+
 
 extend type Query {
   me: User
+  userStats: UserStats!
 }
 
 extend type Mutation {

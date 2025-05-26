@@ -21,3 +21,9 @@ type User struct {
 	DownloadAlerts  bool   `json:"downloadAlerts"`
 	ExpiryReminders bool   `json:"expiryReminders"`
 }
+
+type UserStats struct {
+	TotalFiles     int32  `json:"totalFiles"`
+	TotalDownloads int32  `json:"totalDownloads"`
+	StorageUsed    string `json:"storageUsed"`
+}

@@ -76,34 +76,6 @@ func (r *mutationResolver) UpdateNotificationPreferences(ctx context.Context, do
 	}, nil
 }
 
-// deleteUserFilesFromS3 helper function to clean up S3 files
-func deleteUserFilesFromS3(userID string) error {
-	var files []models.File
-	if err := initializers.DB.Where("user_id = ?", userID).Find(&files).Error; err != nil {
-		return fmt.Errorf("failed to fetch user files: %w", err)
-	}
-
-	s3Client := initializers.S3Client
-	var deleteErrors []error
-
-	for _, file := range files {
-		_, err := s3Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
-			Bucket: aws.String(initializers.S3Bucket),
-			Key:    aws.String(file.StoragePath), // This is now the S3 key after your fix
-		})
-		if err != nil {
-			log.Printf("Failed to delete S3 object %s: %v", file.StoragePath, err)
-			deleteErrors = append(deleteErrors, err)
-		}
-	}
-
-	if len(deleteErrors) > 0 {
-		return fmt.Errorf("failed to delete %d files from S3", len(deleteErrors))
-	}
-
-	return nil
-}
-
 // DeleteAccount is the resolver for the deleteAccount field.
 func (r *mutationResolver) DeleteAccount(ctx context.Context) (bool, error) {
 	userID, err := GetUserIDFromContext(ctx)
@@ -190,3 +162,123 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 		ExpiryReminders: user.ExpiryReminders,
 	}, nil
 }
+
+// UserStats is the resolver for the userStats field.
+func (r *queryResolver) UserStats(ctx context.Context) (*model.UserStats, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var totalFiles int64
+	var totalDownloads int64
+	var totalSizeBytes int64
+
+	// Total Files
+	if err := initializers.DB.Model(&models.File{}).
+		Where("user_id = ?", userID).
+		Count(&totalFiles).Error; err != nil {
+		return nil, err
+	}
+
+	// Total Downloads
+	err = initializers.DB.
+		Model(&models.DownloadEvent{}).
+		Joins("JOIN files ON files.id = download_events.file_id").
+		Where("files.user_id = ?", userID).
+		Count(&totalDownloads).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Total Storage Used (in bytes)
+	err = initializers.DB.
+		Model(&models.File{}).
+		Where("user_id = ?", userID).
+		Select("COALESCE(SUM(file_size), 0)").Scan(&totalSizeBytes).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.UserStats{
+		TotalFiles:     int32(totalFiles),
+		TotalDownloads: int32(totalDownloads),
+		StorageUsed:    formatSize(totalSizeBytes),
+	}, nil
+}
+
+func deleteUserFilesFromS3(userID string) error {
+	var files []models.File
+	if err := initializers.DB.Where("user_id = ?", userID).Find(&files).Error; err != nil {
+		return fmt.Errorf("failed to fetch user files: %w", err)
+	}
+
+	s3Client := initializers.S3Client
+	var deleteErrors []error
+
+	for _, file := range files {
+		_, err := s3Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+			Bucket: aws.String(initializers.S3Bucket),
+			Key:    aws.String(file.StoragePath), // This is now the S3 key after your fix
+		})
+		if err != nil {
+			log.Printf("Failed to delete S3 object %s: %v", file.StoragePath, err)
+			deleteErrors = append(deleteErrors, err)
+		}
+	}
+
+	if len(deleteErrors) > 0 {
+		return fmt.Errorf("failed to delete %d files from S3", len(deleteErrors))
+	}
+
+	return nil
+}
+
+func formatSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func deleteUserFilesFromS3(userID string) error {
+	var files []models.File
+	if err := initializers.DB.Where("user_id = ?", userID).Find(&files).Error; err != nil {
+		return fmt.Errorf("failed to fetch user files: %w", err)
+	}
+
+	s3Client := initializers.S3Client
+	var deleteErrors []error
+
+	for _, file := range files {
+		_, err := s3Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+			Bucket: aws.String(initializers.S3Bucket),
+			Key:    aws.String(file.StoragePath), // This is now the S3 key after your fix
+		})
+		if err != nil {
+			log.Printf("Failed to delete S3 object %s: %v", file.StoragePath, err)
+			deleteErrors = append(deleteErrors, err)
+		}
+	}
+
+	if len(deleteErrors) > 0 {
+		return fmt.Errorf("failed to delete %d files from S3", len(deleteErrors))
+	}
+
+	return nil
+}
+*/

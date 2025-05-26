@@ -63,7 +63,8 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Me func(childComplexity int) int
+		Me        func(childComplexity int) int
+		UserStats func(childComplexity int) int
 	}
 
 	User struct {
@@ -72,6 +73,12 @@ type ComplexityRoot struct {
 		Email           func(childComplexity int) int
 		ExpiryReminders func(childComplexity int) int
 		ID              func(childComplexity int) int
+	}
+
+	UserStats struct {
+		StorageUsed    func(childComplexity int) int
+		TotalDownloads func(childComplexity int) int
+		TotalFiles     func(childComplexity int) int
 	}
 }
 
@@ -85,6 +92,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
+	UserStats(ctx context.Context) (*model.UserStats, error)
 }
 
 type executableSchema struct {
@@ -201,6 +209,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Me(childComplexity), true
 
+	case "Query.userStats":
+		if e.complexity.Query.UserStats == nil {
+			break
+		}
+
+		return e.complexity.Query.UserStats(childComplexity), true
+
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
 			break
@@ -235,6 +250,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.User.ID(childComplexity), true
+
+	case "UserStats.storageUsed":
+		if e.complexity.UserStats.StorageUsed == nil {
+			break
+		}
+
+		return e.complexity.UserStats.StorageUsed(childComplexity), true
+
+	case "UserStats.totalDownloads":
+		if e.complexity.UserStats.TotalDownloads == nil {
+			break
+		}
+
+		return e.complexity.UserStats.TotalDownloads(childComplexity), true
+
+	case "UserStats.totalFiles":
+		if e.complexity.UserStats.TotalFiles == nil {
+			break
+		}
+
+		return e.complexity.UserStats.TotalFiles(childComplexity), true
 
 	}
 	return 0, false
@@ -1223,6 +1259,58 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_userStats(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_userStats(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().UserStats(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.UserStats)
+	fc.Result = res
+	return ec.marshalNUserStats2ᚖgithubᚗcomᚋbasitᚋfileshareᚑbackendᚋgraphᚋmodelᚐUserStats(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_userStats(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalFiles":
+				return ec.fieldContext_UserStats_totalFiles(ctx, field)
+			case "totalDownloads":
+				return ec.fieldContext_UserStats_totalDownloads(ctx, field)
+			case "storageUsed":
+				return ec.fieldContext_UserStats_storageUsed(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserStats", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -1569,6 +1657,138 @@ func (ec *executionContext) fieldContext_User_expiryReminders(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserStats_totalFiles(ctx context.Context, field graphql.CollectedField, obj *model.UserStats) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserStats_totalFiles(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalFiles, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int32)
+	fc.Result = res
+	return ec.marshalNInt2int32(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserStats_totalFiles(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserStats_totalDownloads(ctx context.Context, field graphql.CollectedField, obj *model.UserStats) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserStats_totalDownloads(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalDownloads, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int32)
+	fc.Result = res
+	return ec.marshalNInt2int32(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserStats_totalDownloads(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserStats_storageUsed(ctx context.Context, field graphql.CollectedField, obj *model.UserStats) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserStats_storageUsed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StorageUsed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserStats_storageUsed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3704,6 +3924,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "userStats":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_userStats(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -3768,6 +4010,55 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "expiryReminders":
 			out.Values[i] = ec._User_expiryReminders(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userStatsImplementors = []string{"UserStats"}
+
+func (ec *executionContext) _UserStats(ctx context.Context, sel ast.SelectionSet, obj *model.UserStats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userStatsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserStats")
+		case "totalFiles":
+			out.Values[i] = ec._UserStats_totalFiles(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalDownloads":
+			out.Values[i] = ec._UserStats_totalDownloads(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "storageUsed":
+			out.Values[i] = ec._UserStats_storageUsed(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4175,6 +4466,22 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v any) (int32, error) {
+	res, err := graphql.UnmarshalInt32(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int32(ctx context.Context, sel ast.SelectionSet, v int32) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalInt32(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4203,6 +4510,20 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋbasitᚋfileshareᚑb
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserStats2githubᚗcomᚋbasitᚋfileshareᚑbackendᚋgraphᚋmodelᚐUserStats(ctx context.Context, sel ast.SelectionSet, v model.UserStats) graphql.Marshaler {
+	return ec._UserStats(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserStats2ᚖgithubᚗcomᚋbasitᚋfileshareᚑbackendᚋgraphᚋmodelᚐUserStats(ctx context.Context, sel ast.SelectionSet, v *model.UserStats) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserStats(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
