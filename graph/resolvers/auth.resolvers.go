@@ -10,20 +10,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/basit/fileshare-backend/auth"
-	// "github.com/basit/fileshare-backend/auth/middleware"
 	"github.com/basit/fileshare-backend/graph/model"
 	"github.com/basit/fileshare-backend/initializers"
 	"github.com/basit/fileshare-backend/models"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, email string, password string) (*model.AuthPayload, error) {
-
 	// Check if user exists
 	var existing models.User
 	if err := initializers.DB.Where("email = ?", email).First(&existing).Error; err == nil {

@@ -74,13 +74,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		DeleteFile         func(childComplexity int, fileID string) int
 		Login              func(childComplexity int, email string, password string) int
 		RefreshToken       func(childComplexity int, token string) int
 		Register           func(childComplexity int, email string, password string) int
-		RenameFile         func(childComplexity int, fileID string, newName string) int
 		UpdateFileSettings func(childComplexity int, fileID string, expiresAt *time.Time, password *string) int
-		UploadFile         func(childComplexity int, file graphql.Upload, fileName string, fileSize int32) int
 	}
 
 	Query struct {
@@ -102,9 +99,6 @@ type MutationResolver interface {
 	Register(ctx context.Context, email string, password string) (*model.AuthPayload, error)
 	Login(ctx context.Context, email string, password string) (*model.AuthPayload, error)
 	RefreshToken(ctx context.Context, token string) (*model.AuthPayload, error)
-	UploadFile(ctx context.Context, file graphql.Upload, fileName string, fileSize int32) (*model.File, error)
-	DeleteFile(ctx context.Context, fileID string) (bool, error)
-	RenameFile(ctx context.Context, fileID string, newName string) (*model.File, error)
 	UpdateFileSettings(ctx context.Context, fileID string, expiresAt *time.Time, password *string) (*model.File, error)
 }
 type QueryResolver interface {
@@ -246,18 +240,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.FileStats.TotalDownloads(childComplexity), true
 
-	case "Mutation.deleteFile":
-		if e.complexity.Mutation.DeleteFile == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteFile_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DeleteFile(childComplexity, args["fileId"].(string)), true
-
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
 			break
@@ -294,18 +276,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.Register(childComplexity, args["email"].(string), args["password"].(string)), true
 
-	case "Mutation.renameFile":
-		if e.complexity.Mutation.RenameFile == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_renameFile_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.RenameFile(childComplexity, args["fileId"].(string), args["newName"].(string)), true
-
 	case "Mutation.updateFileSettings":
 		if e.complexity.Mutation.UpdateFileSettings == nil {
 			break
@@ -317,18 +287,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateFileSettings(childComplexity, args["fileId"].(string), args["expiresAt"].(*time.Time), args["password"].(*string)), true
-
-	case "Mutation.uploadFile":
-		if e.complexity.Mutation.UploadFile == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_uploadFile_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UploadFile(childComplexity, args["file"].(graphql.Upload), args["fileName"].(string), args["fileSize"].(int32)), true
 
 	case "Query.file":
 		if e.complexity.Query.File == nil {
@@ -528,29 +486,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_deleteFile_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.field_Mutation_deleteFile_argsFileID(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["fileId"] = arg0
-	return args, nil
-}
-func (ec *executionContext) field_Mutation_deleteFile_argsFileID(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("fileId"))
-	if tmp, ok := rawArgs["fileId"]; ok {
-		return ec.unmarshalNID2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
-
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -656,47 +591,6 @@ func (ec *executionContext) field_Mutation_register_argsPassword(
 	return zeroVal, nil
 }
 
-func (ec *executionContext) field_Mutation_renameFile_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.field_Mutation_renameFile_argsFileID(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["fileId"] = arg0
-	arg1, err := ec.field_Mutation_renameFile_argsNewName(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["newName"] = arg1
-	return args, nil
-}
-func (ec *executionContext) field_Mutation_renameFile_argsFileID(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("fileId"))
-	if tmp, ok := rawArgs["fileId"]; ok {
-		return ec.unmarshalNID2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Mutation_renameFile_argsNewName(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("newName"))
-	if tmp, ok := rawArgs["newName"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
-
 func (ec *executionContext) field_Mutation_updateFileSettings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -753,65 +647,6 @@ func (ec *executionContext) field_Mutation_updateFileSettings_argsPassword(
 	}
 
 	var zeroVal *string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Mutation_uploadFile_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.field_Mutation_uploadFile_argsFile(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["file"] = arg0
-	arg1, err := ec.field_Mutation_uploadFile_argsFileName(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["fileName"] = arg1
-	arg2, err := ec.field_Mutation_uploadFile_argsFileSize(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["fileSize"] = arg2
-	return args, nil
-}
-func (ec *executionContext) field_Mutation_uploadFile_argsFile(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (graphql.Upload, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
-	if tmp, ok := rawArgs["file"]; ok {
-		return ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, tmp)
-	}
-
-	var zeroVal graphql.Upload
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Mutation_uploadFile_argsFileName(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("fileName"))
-	if tmp, ok := rawArgs["fileName"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Mutation_uploadFile_argsFileSize(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (int32, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("fileSize"))
-	if tmp, ok := rawArgs["fileSize"]; ok {
-		return ec.unmarshalNInt2int32(ctx, tmp)
-	}
-
-	var zeroVal int32
 	return zeroVal, nil
 }
 
@@ -1904,219 +1739,6 @@ func (ec *executionContext) fieldContext_Mutation_refreshToken(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_refreshToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_uploadFile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_uploadFile(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UploadFile(rctx, fc.Args["file"].(graphql.Upload), fc.Args["fileName"].(string), fc.Args["fileSize"].(int32))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.File)
-	fc.Result = res
-	return ec.marshalNFile2ᚖgithubᚗcomᚋbasitᚋfileshareᚑbackendᚋgraphᚋmodelᚐFile(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_uploadFile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_File_id(ctx, field)
-			case "originalName":
-				return ec.fieldContext_File_originalName(ctx, field)
-			case "storagePath":
-				return ec.fieldContext_File_storagePath(ctx, field)
-			case "fileSize":
-				return ec.fieldContext_File_fileSize(ctx, field)
-			case "downloadSlug":
-				return ec.fieldContext_File_downloadSlug(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_File_createdAt(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_File_expiresAt(ctx, field)
-			case "publicURL":
-				return ec.fieldContext_File_publicURL(ctx, field)
-			case "user":
-				return ec.fieldContext_File_user(ctx, field)
-			case "downloadCount":
-				return ec.fieldContext_File_downloadCount(ctx, field)
-			case "lastDownloadedAt":
-				return ec.fieldContext_File_lastDownloadedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type File", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_uploadFile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteFile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteFile(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteFile(rctx, fc.Args["fileId"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteFile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteFile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_renameFile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_renameFile(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().RenameFile(rctx, fc.Args["fileId"].(string), fc.Args["newName"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.File)
-	fc.Result = res
-	return ec.marshalNFile2ᚖgithubᚗcomᚋbasitᚋfileshareᚑbackendᚋgraphᚋmodelᚐFile(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_renameFile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_File_id(ctx, field)
-			case "originalName":
-				return ec.fieldContext_File_originalName(ctx, field)
-			case "storagePath":
-				return ec.fieldContext_File_storagePath(ctx, field)
-			case "fileSize":
-				return ec.fieldContext_File_fileSize(ctx, field)
-			case "downloadSlug":
-				return ec.fieldContext_File_downloadSlug(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_File_createdAt(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_File_expiresAt(ctx, field)
-			case "publicURL":
-				return ec.fieldContext_File_publicURL(ctx, field)
-			case "user":
-				return ec.fieldContext_File_user(ctx, field)
-			case "downloadCount":
-				return ec.fieldContext_File_downloadCount(ctx, field)
-			case "lastDownloadedAt":
-				return ec.fieldContext_File_lastDownloadedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type File", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_renameFile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4970,27 +4592,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "uploadFile":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_uploadFile(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteFile":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteFile(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "renameFile":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_renameFile(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "updateFileSettings":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateFileSettings(ctx, field)
@@ -5698,22 +5299,6 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	_ = sel
 	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v any) (graphql.Upload, error) {
-	res, err := graphql.UnmarshalUpload(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, sel ast.SelectionSet, v graphql.Upload) graphql.Marshaler {
-	_ = sel
-	res := graphql.MarshalUpload(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

@@ -22,9 +22,6 @@ extend type Query {
 }
 
 extend type Mutation {
-  uploadFile(file: Upload!, fileName: String!, fileSize: Int!): File!
-  deleteFile(fileId: ID!): Boolean!
-  renameFile(fileId: ID!, newName: String!): File!
   updateFileSettings(
     fileId: ID!,
     expiresAt: Time,

@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -18,6 +17,7 @@ import (
 	"github.com/basit/fileshare-backend/graph/resolvers"
 	"github.com/basit/fileshare-backend/initializers"
 	"github.com/basit/fileshare-backend/jobs"
+	"github.com/basit/fileshare-backend/routes"
 )
 
 const defaultPort = "8080"
@@ -48,15 +48,17 @@ func main() {
 
 	router := gin.Default()
 	router.Use(middleware.GinContextToContextMiddleware())
+	
+	routes.RegisterFileRoutes(router)
 
 	router.GET("/", func(c *gin.Context) {
 		playground.Handler("GraphQL playground", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	router.POST("/graphql", func(c *gin.Context) {
-		middleware.AuthMiddleware(srv).ServeHTTP(c.Writer, c.Request)
+	router.POST("/graphql", middleware.AuthOptional(), func(c *gin.Context) {
+		srv.ServeHTTP(c.Writer, c.Request)
 	})
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(router.Run(":" + port))
 }
