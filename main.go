@@ -24,6 +24,7 @@ const defaultPort = "8080"
 
 func main() {
 	initializers.ConnectToDatabase()
+	initializers.InitAWS()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
