@@ -2,33 +2,10 @@
 
 package model
 
-import (
-	"time"
-)
-
 type AuthPayload struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`
 	User         *User  `json:"user"`
-}
-
-type File struct {
-	ID               string     `json:"id"`
-	OriginalName     string     `json:"originalName"`
-	StoragePath      string     `json:"storagePath"`
-	FileSize         int32      `json:"fileSize"`
-	DownloadSlug     string     `json:"downloadSlug"`
-	CreatedAt        string     `json:"createdAt"`
-	ExpiresAt        string     `json:"expiresAt"`
-	PublicURL        string     `json:"publicURL"`
-	User             *User      `json:"user"`
-	DownloadCount    int32      `json:"downloadCount"`
-	LastDownloadedAt *time.Time `json:"lastDownloadedAt,omitempty"`
-}
-
-type FileStats struct {
-	TotalDownloads   int32      `json:"totalDownloads"`
-	LastDownloadedAt *time.Time `json:"lastDownloadedAt,omitempty"`
 }
 
 type Mutation struct {

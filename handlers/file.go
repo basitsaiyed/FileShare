@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -188,6 +189,11 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
+	if err := initializers.DB.Where("file_id = ?", file.ID).Delete(&models.DownloadEvent{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete download events"})
+		return
+	}
+
 	if err := initializers.DB.Delete(&file).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete from DB"})
 		return
@@ -204,10 +210,6 @@ func generateSlug() string {
 func DownloadFile(c *gin.Context) {
 	slug := c.Param("slug")
 	var file models.File
-	if file.ExpiresAt != nil && time.Now().After(*file.ExpiresAt) {
-		c.JSON(http.StatusGone, gin.H{"error": "This file has expired"})
-		return
-	}
 
 	if err := initializers.DB.Where("download_slug = ?", slug).First(&file).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
@@ -234,6 +236,10 @@ func DownloadFile(c *gin.Context) {
 			return
 		}
 	}
+	if file.ExpiresAt != nil && time.Now().After(*file.ExpiresAt) {
+		c.JSON(http.StatusGone, gin.H{"error": "This file has expired"})
+		return
+	}
 
 	// ✅ Atomic counter update
 	initializers.DB.Model(&file).UpdateColumn("download_count", gorm.Expr("download_count + ?", 1))
@@ -256,14 +262,30 @@ func DownloadFile(c *gin.Context) {
 	}
 	initializers.DB.Create(&downloadEvent)
 
-	// ✅ Serve the file
-	presignedURL, err := generatePresignedURL(file.StoragePath) // or file.S3Key
+	// Serve the file
+	// presignedURL, err := generatePresignedURL(file.StoragePath) // or file.S3Key
+	// if err != nil {
+	// 	log.Printf("Failed to generate presigned URL: %v", err)
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate download link"})
+	// 	return
+	// }
+	// c.Redirect(http.StatusFound, presignedURL)
+	s3URL, err := generatePresignedURL(file.StoragePath)
 	if err != nil {
-		log.Printf("Failed to generate presigned URL: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate download link"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate S3 URL"})
 		return
 	}
-	c.Redirect(http.StatusFound, presignedURL)
+
+	resp, err := http.Get(s3URL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch file"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// ✅ Stream the file securely
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%q", file.OriginalName))
+	c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, nil)
 }
 
 func generatePresignedURL(key string) (string, error) {

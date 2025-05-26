@@ -13,6 +13,21 @@ import (
 	"github.com/basit/fileshare-backend/models"
 )
 
+// ChangePassword is the resolver for the changePassword field.
+func (r *mutationResolver) ChangePassword(ctx context.Context, currentPassword string, newPassword string) (bool, error) {
+	panic(fmt.Errorf("not implemented: ChangePassword - changePassword"))
+}
+
+// UpdateNotificationPreferences is the resolver for the updateNotificationPreferences field.
+func (r *mutationResolver) UpdateNotificationPreferences(ctx context.Context, downloadAlerts bool, expiryReminders bool) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: UpdateNotificationPreferences - updateNotificationPreferences"))
+}
+
+// DeleteAccount is the resolver for the deleteAccount field.
+func (r *mutationResolver) DeleteAccount(ctx context.Context) (bool, error) {
+	panic(fmt.Errorf("not implemented: DeleteAccount - deleteAccount"))
+}
+
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	userID, err := GetUserIDFromContext(ctx)

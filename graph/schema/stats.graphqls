@@ -1,8 +1,0 @@
-type FileStats {
-  totalDownloads: Int!
-  lastDownloadedAt: Time
-}
-
-extend type Query {
-  fileStats(fileId: ID!): FileStats!
-}

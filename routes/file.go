@@ -9,12 +9,17 @@ import (
 )
 
 func RegisterFileRoutes(r *gin.Engine) {
-	fileGroup := r.Group("/api/files")
-	fileGroup.GET("/download/:slug", handlers.DownloadFile) // public download
-	fileGroup.Use(middleware.AuthRequired()) // protect all file endpoints
+	// Public download route (no auth required)
+	r.GET("/api/files/download/:slug", handlers.DownloadFile)
 
-	fileGroup.POST("/upload", handlers.UploadFile)
-	fileGroup.GET("/", handlers.ListFiles)
-	fileGroup.PUT("/:id/rename", handlers.RenameFile)
-	fileGroup.DELETE("/:id", handlers.DeleteFile)
+	// Protected file management routes (auth required)
+	fileGroup := r.Group("/api/files")
+	fileGroup.Use(middleware.AuthRequired())
+	{
+		fileGroup.POST("/upload", handlers.UploadFile)
+		fileGroup.GET("/", handlers.ListFiles)
+		fileGroup.PUT("/:id/rename", handlers.RenameFile)
+		fileGroup.DELETE("/:id", handlers.DeleteFile)
+	}
 }
+

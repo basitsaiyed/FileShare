@@ -8,3 +8,8 @@ extend type Query {
   me: User
 }
 
+extend type Mutation {
+  changePassword(currentPassword: String!, newPassword: String!): Boolean!
+  updateNotificationPreferences(downloadAlerts: Boolean!, expiryReminders: Boolean!): User!
+  deleteAccount: Boolean!
+}
