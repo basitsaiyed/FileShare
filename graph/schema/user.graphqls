@@ -2,7 +2,10 @@ type User {
   id: ID!
   email: String!
   createdAt: String!
+  downloadAlerts: Boolean!
+  expiryReminders: Boolean!
 }
+
 
 extend type Query {
   me: User

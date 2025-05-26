@@ -10,7 +10,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/basit/fileshare-backend/auth"
-	//	"github.com/basit/fileshare-backend/graph/resolvers"
+	"github.com/basit/fileshare-backend/graph/resolvers"
+
 )
 
 // func AuthMiddleware(next http.Handler) http.Handler {
@@ -45,12 +46,10 @@ import (
 func AuthOptional() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-
 		if authHeader != "" {
 			parts := strings.Split(authHeader, " ")
 			if len(parts) == 2 && parts[0] == "Bearer" {
 				token := parts[1]
-
 				userID, err := auth.ValidateToken(token)
 				if err == nil {
 					if parsedUID, err := uuid.Parse(userID); err == nil {
@@ -59,8 +58,6 @@ func AuthOptional() gin.HandlerFunc {
 				}
 			}
 		}
-
-		// ✅ continue to next even if not authenticated
 		c.Next()
 	}
 }
@@ -102,6 +99,9 @@ const GinContextKey = "GinContextKey"
 func GinContextToContextMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := context.WithValue(c.Request.Context(), GinContextKey, c)
+		if uid, exists := c.Get("userID"); exists {
+			ctx = context.WithValue(ctx, resolvers.UserIDKey, uid)
+		}
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}

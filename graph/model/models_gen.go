@@ -15,7 +15,9 @@ type Query struct {
 }
 
 type User struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	CreatedAt string `json:"createdAt"`
+	ID              string `json:"id"`
+	Email           string `json:"email"`
+	CreatedAt       string `json:"createdAt"`
+	DownloadAlerts  bool   `json:"downloadAlerts"`
+	ExpiryReminders bool   `json:"expiryReminders"`
 }

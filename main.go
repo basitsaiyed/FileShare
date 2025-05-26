@@ -50,7 +50,6 @@ func main() {
 	router := gin.Default()
 	// Global middleware
 	router.Use(
-		middleware.GinContextToContextMiddleware(),
 		middleware.RateLimitMiddleware(),
 	)
 
@@ -60,9 +59,13 @@ func main() {
 		playground.Handler("GraphQL playground", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	router.POST("/graphql", middleware.AuthOptional(), func(c *gin.Context) {
-		srv.ServeHTTP(c.Writer, c.Request)
-	})
+	router.POST("/graphql",
+		middleware.AuthOptional(),
+		middleware.GinContextToContextMiddleware(),
+		func(c *gin.Context) {
+			srv.ServeHTTP(c.Writer, c.Request)
+		},
+	)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(router.Run(":" + port))

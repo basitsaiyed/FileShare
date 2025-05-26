@@ -7,6 +7,11 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"log"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/basit/fileshare-backend/graph/model"
 	"github.com/basit/fileshare-backend/initializers"
@@ -15,17 +20,154 @@ import (
 
 // ChangePassword is the resolver for the changePassword field.
 func (r *mutationResolver) ChangePassword(ctx context.Context, currentPassword string, newPassword string) (bool, error) {
-	panic(fmt.Errorf("not implemented: ChangePassword - changePassword"))
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	var user models.User
+	if err := initializers.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return false, fmt.Errorf("user not found")
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return false, fmt.Errorf("incorrect current password")
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return false, fmt.Errorf("failed to hash new password")
+	}
+
+	user.PasswordHash = string(newHash)
+	if err := initializers.DB.Save(&user).Error; err != nil {
+		return false, fmt.Errorf("failed to update password")
+	}
+
+	return true, nil
 }
 
 // UpdateNotificationPreferences is the resolver for the updateNotificationPreferences field.
 func (r *mutationResolver) UpdateNotificationPreferences(ctx context.Context, downloadAlerts bool, expiryReminders bool) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: UpdateNotificationPreferences - updateNotificationPreferences"))
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var user models.User
+	if err := initializers.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	user.DownloadAlerts = downloadAlerts
+	user.ExpiryReminders = expiryReminders
+
+	if err := initializers.DB.Save(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to update preferences")
+	}
+
+	return &model.User{
+		ID:              user.ID.String(),
+		Email:           user.Email,
+		CreatedAt:       user.CreatedAt.String(),
+		DownloadAlerts:  user.DownloadAlerts,
+		ExpiryReminders: user.ExpiryReminders,
+	}, nil
+}
+
+// deleteUserFilesFromS3 helper function to clean up S3 files
+func deleteUserFilesFromS3(userID string) error {
+	var files []models.File
+	if err := initializers.DB.Where("user_id = ?", userID).Find(&files).Error; err != nil {
+		return fmt.Errorf("failed to fetch user files: %w", err)
+	}
+
+	s3Client := initializers.S3Client
+	var deleteErrors []error
+
+	for _, file := range files {
+		_, err := s3Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+			Bucket: aws.String(initializers.S3Bucket),
+			Key:    aws.String(file.StoragePath), // This is now the S3 key after your fix
+		})
+		if err != nil {
+			log.Printf("Failed to delete S3 object %s: %v", file.StoragePath, err)
+			deleteErrors = append(deleteErrors, err)
+		}
+	}
+
+	if len(deleteErrors) > 0 {
+		return fmt.Errorf("failed to delete %d files from S3", len(deleteErrors))
+	}
+
+	return nil
 }
 
 // DeleteAccount is the resolver for the deleteAccount field.
 func (r *mutationResolver) DeleteAccount(ctx context.Context) (bool, error) {
-	panic(fmt.Errorf("not implemented: DeleteAccount - deleteAccount"))
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	tx := initializers.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Try to delete from S3, but don't fail account deletion if this fails
+	s3DeleteErr := deleteUserFilesFromS3(userID.String())
+	if s3DeleteErr != nil {
+		log.Printf("S3 cleanup failed for user %s: %v", userID.String(), s3DeleteErr)
+		// You could queue this for retry later
+		// queueS3Cleanup(userID.String())
+	}
+
+	// Step 1: Get user's files first
+	var userFiles []models.File
+	if err := tx.Where("user_id = ?", userID).Find(&userFiles).Error; err != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("failed to fetch user files: %w", err)
+	}
+
+	// Step 2: Extract file IDs
+	var fileIDs []string
+	for _, file := range userFiles {
+		fileIDs = append(fileIDs, file.ID.String())
+	}
+
+	// Step 3: Delete download events for those file IDs
+	if len(fileIDs) > 0 {
+		if err := tx.Where("file_id IN ?", fileIDs).Delete(&models.DownloadEvent{}).Error; err != nil {
+			tx.Rollback()
+			return false, fmt.Errorf("failed to delete download events: %w", err)
+		}
+	}
+
+	// Step 4: Delete the files themselves
+	if err := tx.Where("user_id = ?", userID).Delete(&models.File{}).Error; err != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("failed to delete files: %w", err)
+	}
+
+	if err := tx.Delete(&models.User{}, "id = ?", userID).Error; err != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("failed to delete account: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return false, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// If S3 cleanup failed, you might want to return a warning
+	if s3DeleteErr != nil {
+		log.Printf("Account deleted but S3 cleanup incomplete for user %s", userID.String())
+	}
+
+	return true, nil
 }
 
 // Me is the resolver for the me field.
@@ -41,8 +183,10 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}
 
 	return &model.User{
-		ID:        user.ID.String(),
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt.String(),
+		ID:              user.ID.String(),
+		Email:           user.Email,
+		CreatedAt:       user.CreatedAt.String(),
+		DownloadAlerts:  user.DownloadAlerts,
+		ExpiryReminders: user.ExpiryReminders,
 	}, nil
 }
