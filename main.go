@@ -52,7 +52,13 @@ func main() {
 	router := gin.Default()
 	// Add CORS middleware before other middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		// AllowOrigins:     []string{"http://localhost:3000"},
+		// AllowAllOrigins:  true,
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"https://preview--easy-file-glide.lovable.app",
+			"https://*.lovable.app", // This allows all Lovable preview domains
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
