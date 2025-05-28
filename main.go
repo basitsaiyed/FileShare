@@ -58,6 +58,7 @@ func main() {
 			"http://localhost:3000",
 			"https://preview--easy-file-glide.lovable.app",
 			"https://*.lovable.app", // This allows all Lovable preview domains
+			"https://basitsfileshare.netlify.app/login",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
