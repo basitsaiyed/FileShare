@@ -18,11 +18,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"github.com/basit/fileshare-backend/initializers"
 	"github.com/basit/fileshare-backend/models"
+
 )
 
 // uploadFileToS3 uploads a file to AWS S3
@@ -125,6 +127,7 @@ func UploadFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"file":   newFile,
 		"s3_url": s3URL,
+		"qr_url": newFile.QRCodePath,
 	})
 }
 
@@ -280,14 +283,6 @@ func DownloadFile(c *gin.Context) {
 	}
 	initializers.DB.Create(&downloadEvent)
 
-	// Serve the file
-	// presignedURL, err := generatePresignedURL(file.StoragePath) // or file.S3Key
-	// if err != nil {
-	// 	log.Printf("Failed to generate presigned URL: %v", err)
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate download link"})
-	// 	return
-	// }
-	// c.Redirect(http.StatusFound, presignedURL)
 	s3URL, err := generatePresignedURL(file.StoragePath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate S3 URL"})
@@ -341,4 +336,26 @@ func generatePresignedURL(key string) (string, error) {
 	}
 
 	return req.URL, nil
+}
+
+func GetQRCode(c *gin.Context) {
+	slug := c.Param("slug")
+
+	// Optional: Validate if the file exists
+	var file models.File
+	if err := initializers.DB.Where("download_slug = ?", slug).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+	fmt.Println("Base URL:", os.Getenv("BASE_URL"))
+
+	url := fmt.Sprintf("%s/d/%s", os.Getenv("BASE_URL"), slug)
+
+	png, err := qrcode.Encode(url, qrcode.Medium, 256)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate QR code"})
+		return
+	}
+
+	c.Data(http.StatusOK, "image/png", png)
 }

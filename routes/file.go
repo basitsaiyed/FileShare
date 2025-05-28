@@ -5,6 +5,7 @@ import (
 
 	"github.com/basit/fileshare-backend/auth/middleware"
 	"github.com/basit/fileshare-backend/handlers"
+
 )
 
 func RegisterFileRoutes(r *gin.Engine) {
@@ -20,5 +21,6 @@ func RegisterFileRoutes(r *gin.Engine) {
 		fileGroup.GET("/", handlers.ListFiles)
 		fileGroup.PUT("/:id/rename", handlers.RenameFile)
 		fileGroup.DELETE("/:id", handlers.DeleteFile)
+		fileGroup.GET("/:slug/qr", handlers.GetQRCode)
 	}
 }

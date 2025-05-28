@@ -25,4 +25,6 @@ type File struct {
 
 	DownloadCount    int
 	LastDownloadedAt *time.Time
+
+	QRCodePath string `gorm:"default:null"`
 }

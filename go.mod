@@ -14,6 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lithammer/shortuuid/v4 v4.2.0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/supabase-community/storage-go v0.7.0
 	github.com/vektah/gqlparser/v2 v2.5.26
 	golang.org/x/crypto v0.37.0
