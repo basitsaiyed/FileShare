@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -52,6 +54,8 @@ func uploadFileToS3(file multipart.File, fileHeader *multipart.FileHeader, key s
 func UploadFile(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
+	baseURL := os.Getenv("BASE_URL")
+
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
@@ -90,16 +94,26 @@ func UploadFile(c *gin.Context) {
 	// }
 	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days from now
 
+	downloadSlug := generateSlug()
+
+	mimeType := mime.TypeByExtension(filepath.Ext(fileHeader.Filename))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
 	// Save metadata in DB
 	newFile := models.File{
 		ID:           uuid.New(),
 		OriginalName: fileHeader.Filename,
 		StoragePath:  key,
 		FileSize:     int32(fileHeader.Size),
-		DownloadSlug: generateSlug(),
+		DownloadSlug: downloadSlug,
 		CreatedAt:    time.Now(),
 		UserID:       &userID,
 		ExpiresAt:    &expiresAt,
+		PublicURL:    fmt.Sprintf("%s/d/%s", baseURL, downloadSlug),
+		IsPublic:     true,
+		ContentType:  mimeType,
 	}
 
 	if err := initializers.DB.Create(&newFile).Error; err != nil {
@@ -134,14 +148,16 @@ func ListFiles(c *gin.Context) {
 	// Add full URLs to each file for frontend convenience
 	type FileWithURL struct {
 		models.File
-		URL string `json:"url"`
+		URL          string `json:"url"`
+		ShareableURL string `json:"shareableUrl"`
 	}
 
 	var filesWithURLs []FileWithURL
 	for _, file := range files {
 		filesWithURLs = append(filesWithURLs, FileWithURL{
-			File: file,
-			URL:  generateS3URL(file.StoragePath),
+			File:         file,
+			URL:          generateS3URL(file.StoragePath),
+			ShareableURL: file.PublicURL,
 		})
 	}
 
@@ -209,6 +225,8 @@ func generateSlug() string {
 
 func DownloadFile(c *gin.Context) {
 	slug := c.Param("slug")
+	preview := c.Query("preview") == "true"
+
 	var file models.File
 
 	if err := initializers.DB.Where("download_slug = ?", slug).First(&file).Error; err != nil {
@@ -241,11 +259,11 @@ func DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// ✅ Atomic counter update
+	// Atomic counter update
 	initializers.DB.Model(&file).UpdateColumn("download_count", gorm.Expr("download_count + ?", 1))
 	initializers.DB.Model(&file).Update("last_downloaded_at", time.Now())
 
-	// ✅ Log the download event
+	// Log the download event
 	var userID *uuid.UUID
 	if uid, ok := c.Get("userID"); ok {
 		uidVal := uid.(uuid.UUID)
@@ -283,9 +301,30 @@ func DownloadFile(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// ✅ Stream the file securely
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%q", file.OriginalName))
+	// ⬇️ Only force download if not previewing
+	if !preview {
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%q", file.OriginalName))
+	}
+
 	c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, nil)
+}
+
+func HandlePublicDownload(c *gin.Context) {
+	slug := c.Param("slug")
+
+	var file models.File
+	if err := initializers.DB.First(&file, "download_slug = ?", slug).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	if !file.IsPublic {
+		c.JSON(http.StatusForbidden, gin.H{"error": "This file is not public"})
+		return
+	}
+
+	// Redirect internally to the actual download endpoint
+	c.Redirect(http.StatusTemporaryRedirect, "/api/files/download/"+slug+"?"+c.Request.URL.RawQuery)
 }
 
 func generatePresignedURL(key string) (string, error) {
