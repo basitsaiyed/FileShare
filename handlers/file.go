@@ -347,9 +347,9 @@ func GetQRCode(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 		return
 	}
-	fmt.Println("Base URL:", os.Getenv("BASE_URL"))
+	fmt.Println("Base URL:", os.Getenv("QR_BASE_URL"))
 
-	url := fmt.Sprintf("%s/d/%s", os.Getenv("BASE_URL"), slug)
+	url := fmt.Sprintf("%s/d/%s", os.Getenv("QR_BASE_URL"), slug)
 
 	png, err := qrcode.Encode(url, qrcode.Medium, 256)
 	if err != nil {
