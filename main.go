@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vektah/gqlparser/v2/ast"
 
+	"github.com/basit/fileshare-backend/auth/Oauth"
 	"github.com/basit/fileshare-backend/auth/middleware"
 	"github.com/basit/fileshare-backend/graph"
 	"github.com/basit/fileshare-backend/graph/resolvers"
@@ -24,9 +25,24 @@ import (
 
 const defaultPort = "8080"
 
-func main() {
+func init() {
+	start := time.Now()
+	log.Println("⏳ Initializing application...")
+
+	dbStart := time.Now()
 	initializers.ConnectToDatabase()
+	log.Printf("✅ Database connected in %v", time.Since(dbStart))
+
 	initializers.InitAWS()
+
+	authStart := time.Now()
+	Oauth.InitStore()
+	log.Printf("✅ Google auth store initialized in %v", time.Since(authStart))
+
+	log.Printf("🚀 Total init() completed in %v", time.Since(start))
+}
+
+func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort

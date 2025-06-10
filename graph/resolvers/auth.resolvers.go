@@ -33,10 +33,12 @@ func (r *mutationResolver) Register(ctx context.Context, email string, password 
 	}
 
 	// Create user
+	emailProvider := "email"
 	user := models.User{
 		ID:           uuid.New(),
 		Email:        email,
 		PasswordHash: string(hashedPassword),
+		Provider:     &emailProvider,
 	}
 
 	if err := initializers.DB.Create(&user).Error; err != nil {
@@ -44,9 +46,23 @@ func (r *mutationResolver) Register(ctx context.Context, email string, password 
 	}
 
 	// Generate JWT
-	accessToken, _, err := auth.GenerateTokens(user.ID.String())
+	accessToken, refreshToken, err := auth.GenerateTokens(user.ID.String())
 	if err != nil {
 		return nil, err
+	}
+
+	// Set refresh token cookie
+	ginContext, ok := ctx.Value("GinContextKey").(*gin.Context)
+	if ok {
+		http.SetCookie(ginContext.Writer, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    refreshToken,
+			HttpOnly: true,
+			Secure:   true,
+			Path:     "/api/refresh-token",
+			SameSite: http.SameSiteStrictMode,
+			Expires:  time.Now().Add(30 * 24 * time.Hour),
+		})
 	}
 
 	return &model.AuthPayload{
@@ -54,7 +70,6 @@ func (r *mutationResolver) Register(ctx context.Context, email string, password 
 		User: &model.User{
 			ID:    user.ID.String(),
 			Email: user.Email,
-			// Add other fields as needed
 		},
 	}, nil
 }

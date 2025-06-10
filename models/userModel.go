@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -14,4 +15,21 @@ type User struct {
 	UpdatedAt       time.Time
 	DownloadAlerts  bool `gorm:"default:true"`
 	ExpiryReminders bool `gorm:"default:true"`
+
+	GoogleID           *string `gorm:"uniqueIndex" json:"google_id,omitempty"`
+	GitHubID           *string `gorm:"uniqueIndex" json:"github_id,omitempty"`
+	GoogleAccessToken  *string `json:"-"` // Don't expose in JSON
+	GoogleRefreshToken *string `json:"-"`
+	GitHubAccessToken  *string `json:"-"`
+	Provider           *string `json:"provider,omitempty"`
+
+	GoogleTokenExpiresAt *time.Time `json:"-"`
+	GitHubTokenExpiresAt *time.Time `json:"-"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
 }
