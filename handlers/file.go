@@ -127,7 +127,7 @@ func UploadFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"file":   newFile,
 		"s3_url": s3URL,
-		"qr_url": newFile.QRCodePath,
+		"qr_url": fmt.Sprintf("%s/api/files/%s/qr", baseURL, newFile.DownloadSlug),
 	})
 }
 
